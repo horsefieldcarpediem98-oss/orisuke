@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head><title>文章整形ツール「オリスケ」v2</title></head>
+<body>
+1行当たりの文字数：<input type="text" id="txtByteOnRow" value="20" size="4" maxlength="4"/><br/>
+改行前：<textarea id="beforeText" cols="80" rows="20"></textarea><br/>
+<input type="button" value="改行する" id="btnSplit" onclick="splitText()"/>
+<input type="button" value="改行前に戻す" id="btnConcat" onclick="concatText()"/>
+<input type="button" value="直前の処理前に戻す" id="btnSplit" onclick="rollbackText()"/>
+<br/>
+<!--41破 ダイアロおやじ教室 吉岡三智子さん作成-->
+<!--引用行（> ）の折り返し対応：うまっちさん改善依頼版-->
+改行後：<textarea id="afterText" cols="80" rows="20"></textarea><br/>
+改行後行数：<input type="text" id="txtRowCount" size="4" readonly><br/>
+<script>
+var rowLen = 0;
+var beforeText = "";
+var afterText = "";
+var tailNg = /「|『|（|＜|［|【/;
+var tailOk = /、|。|・|？|！|」|』|￥|）|＞|］|】/;
+function checkRowLenTxt(){
+  var rowLenTxt = document.getElementById("txtByteOnRow").value;
+  if (isNaN(rowLenTxt)){
+    alert('1行当たりの文字数は数値で入力してください');
+    return false;
+  }
+  rowLen = parseInt(rowLenTxt, 10);
+  if (rowLen <=0 || rowLen >1000) {
+    alert('1行当たりの文字数は1から1000の間で入力してください');
+    return false;
+  }
+  return true;
+}
+function splitText(){
+  if (!checkRowLenTxt()) return;
+  beforeText = document.getElementById("beforeText").value;
+  afterText = document.getElementById("afterText").value;
+  var byteCount = 0;
+  var resText = "";
+  var prefix = ""; // 引用記号を記憶する変数
+
+  // 最初の行が "> " で始まるか確認
+  if (beforeText.substring(0, 2) == "> ") {
+    prefix = "> ";
+  }
+
+  for (var i = 0; i < beforeText.length; i++) {
+    var n = escape(beforeText[i]);
+    byteCount += (n.length < 4) ? 1 : 2;
+
+    if (beforeText[i] == "\n") {
+      byteCount = 0;
+      prefix = ""; // 行が変わったらリセット
+      // 次の行が "> " で始まるか先読みして設定
+      if (beforeText.substring(i + 1, i + 3) == "> ") {
+        prefix = "> ";
+      }
+    } else if (byteCount >= rowLen * 2) {
+      if (beforeText.charAt(i).match(tailNg) != null) {
+        resText += "\n" + prefix; // 折り返し時にprefixを継承
+        byteCount = (n.length < 4) ? 1 : 2;
+      }
+      if (byteCount > rowLen * 2 && beforeText.charAt(i).match(tailOk) == null) {
+        resText += "\n" + prefix; // 折り返し時にprefixを継承
+        byteCount = (n.length < 4) ? 1 : 2;
+      }
+    }
+    resText += beforeText.charAt(i);
+  }
+
+  document.getElementById("afterText").value = resText;
+  byteCount = resText.match(/\n/g).length + 1;
+  for (var i = resText.length - 1; i > 0; i--, byteCount--) {
+    if (resText.charAt(i).match(/\n/) == null) {
+      document.getElementById("txtRowCount").value = byteCount;
+      break;
+    }
+  }
+  document.getElementById("afterText").focus();
+}
+function concatText(){
+  if (!checkRowLenTxt()) return;
+  beforeText = document.getElementById("beforeText").value;
+  afterText = document.getElementById("afterText").value;
+  var resText = "";
+  var beginPos = 0;
+  var nextPos = 0;
+  while (true){
+    nextPos = afterText.indexOf("\n", beginPos);
+    if (nextPos < 0){
+      resText += afterText.substring(beginPos);
+      break;
+    } else if (nextPos - beginPos < rowLen) {
+      resText += afterText.substring(beginPos, nextPos) + "\n";
+    } else {
+      resText += afterText.substring(beginPos, nextPos);
+    }
+    beginPos = nextPos + 1;
+  }
+  document.getElementById("beforeText").value = resText;
+  document.getElementById("beforeText").focus();
+}
+function rollbackText(){
+  document.getElementById("beforeText").value = beforeText;
+  document.getElementById("afterText").value = afterText;
+}
+</script>
+</body>
+</html>
